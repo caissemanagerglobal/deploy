@@ -86,6 +86,7 @@ sudo systemctl restart nginx
 
 # Install Docker and Docker Compose
 sudo apt-get install -y docker.io docker-compose
+sudo chmod +x /root/cm_odoo/entrypoint.sh
 
 # Run Docker Compose
 cd $CM_ODOO_DIR
