@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Check if curl and unzip are installed
+apt install curl
 if ! command -v curl &> /dev/null; then
     echo "curl could not be found, installing..."
     sudo apt-get update
