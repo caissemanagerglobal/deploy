@@ -35,17 +35,21 @@ unzip /tmp/cm.zip -d /tmp/deploy_files
 
 # Continue with the rest of the deployment
 # Define directories
+mkdir /root/cm_odoo
 CM_FRONT_DIR="/var/www/cm_front"
 CM_KDS_DIR="/var/www/cm_kds"
 CM_ODOO_DIR="/root/cm_odoo"
+ufw allow 3000
+ufw allow 3001
+ufw allow 8089
 
 # Create directories
 sudo mkdir -p $CM_FRONT_DIR $CM_KDS_DIR
 
 # Copy the code to the appropriate directories
-sudo cp -r /tmp/deploy_files/cm_front/* $CM_FRONT_DIR/
-sudo cp -r /tmp/deploy_files/cm_kds/* $CM_KDS_DIR/
-sudo cp -r /tmp/deploy_files/cm_odoo/* /root/cm_odoo/
+sudo cp -r /tmp/deploy_files/cm/cm_front/* $CM_FRONT_DIR/
+sudo cp -r /tmp/deploy_files/cm/cm_kds/* $CM_KDS_DIR/
+sudo cp -r /tmp/deploy_files/cm/cm_odoo/* /root/cm_odoo/
 
 # Install Nginx
 sudo apt-get update
