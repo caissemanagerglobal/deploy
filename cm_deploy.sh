@@ -13,15 +13,15 @@ if ! command -v unzip &> /dev/null; then
     sudo apt-get install -y unzip
 fi
 
-echo "Enter your deployment token:"
-read TOKEN
+# Get UUID from user input
+echo "Enter your UUID:"
+read UUID
 
-# Replace UUID and MAC_ADDRESS with the actual values
-UUID="your_uuid"
-MAC_ADDRESS="your_mac_address"
+# Get MAC address of the first network interface
+MAC_ADDRESS=$(ip link show | awk '/ether/ {print $2; exit}')
 
 # Send the token to the Odoo API and download the zip file
-response=$(curl -s -w "%{http_code}" -o /tmp/cm.zip -X POST http://your_odoo_server/deploy -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}')
+response=$(curl -s -w "%{http_code}" -o /tmp/cm.zip -X POST http://erp.caisse-manager.ma/deploy -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}')
 
 if [ "$response" -eq 200 ]; then
     echo "Token validated and file downloaded successfully."
