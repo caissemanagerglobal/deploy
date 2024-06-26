@@ -21,7 +21,7 @@ read UUID
 MAC_ADDRESS=$(ip link show | awk '/ether/ {print $2; exit}')
 
 # Send the token to the Odoo API and download the zip file
-response=$(curl -s -w "%{http_code}" -o /tmp/cm.zip -X POST http://erp.caisse-manager.ma/deploy -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}')
+response=$(curl -s -w "%{http_code}" -o /tmp/cm.zip -X POST https://erp.caisse-manager.ma/deploy -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}')
 
 if [ "$response" -eq 200 ]; then
     echo "Token validated and file downloaded successfully."
