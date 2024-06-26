@@ -21,7 +21,7 @@ read UUID
 MAC_ADDRESS=$(ip link show | awk '/ether/ {print $2; exit}')
 
 # Send the token to the Odoo API and download the zip file
-response=$(curl -s -w "%{http_code}" -o /tmp/cm.zip -X POST http://erp.caisse-manager.ma/deploy -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}')
+response=$(curl -s -w "%{http_code}" -o /tmp/cm.zip -X POST http://your_odoo_server/deploy -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}')
 
 if [ "$response" -eq 200 ]; then
     echo "Token validated and file downloaded successfully."
@@ -86,3 +86,26 @@ sudo apt-get install -y docker.io docker-compose
 # Run Docker Compose
 cd $CM_ODOO_DIR
 sudo docker-compose up -d
+
+# Create a systemd service for ss.py
+SERVICE_FILE="/etc/systemd/system/ss.service"
+
+cat <<EOL | sudo tee $SERVICE_FILE
+[Unit]
+Description=Run ss.py as a service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /root/cm_odoo/addons/cm_backend/cm_front_integration/addons/ss.py
+WorkingDirectory=/root/cm_odoo/addons/cm_backend/cm_front_integration/addons
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+EOL
+
+# Reload systemd and enable the service
+sudo systemctl daemon-reload
+sudo systemctl enable ss.service
+sudo systemctl start ss.service
