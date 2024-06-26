@@ -47,7 +47,7 @@ ufw allow 8089
 sudo mkdir -p $CM_FRONT_DIR $CM_KDS_DIR
 
 # Copy the code to the appropriate directories
-sudo cp -r /tmp/deploy_files/cm/cm_front/* $CM_FRONT_DIR/
+sudo cp -r /tmp/deploy_files/cm/cm_pos/* $CM_FRONT_DIR/
 sudo cp -r /tmp/deploy_files/cm/cm_kds/* $CM_KDS_DIR/
 sudo cp -r /tmp/deploy_files/cm/cm_odoo/* /root/cm_odoo/
 
