@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# Ensure the script is called with the correct number of arguments
+if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 <UUID> <API_IP>"
+    exit 1
+fi
+
+# Assign arguments to variables
+UUID=$1
+API_IP=$2
+
 install_if_not_exists() {
     local package=$1
     if ! command -v $package &> /dev/null; then
@@ -15,16 +25,9 @@ install_if_not_exists unzip
 echo "Installing Node.js v18.20.2 and npm 10.5.0..."
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs
-sudo apt-get install openssh-server
 
 node_version=$(node -v)
 npm_version=$(npm -v)
-
-echo "Enter your UUID:"
-read UUID
-
-echo "Enter the API IP address:"
-read API_IP
 
 # Get MAC address of the first network interface
 MAC_ADDRESS=$(ip addr show | awk '/ether/ {print $2; exit}')
@@ -82,7 +85,6 @@ EOL
 # Replace placeholders in docker-compose.yml
 sed -i "s/ed_odoo_code/$EXPIRATION_DATE/" $CM_ODOO_DIR/docker-compose.yml
 sed -i "s/uuid_code/$UUID/" $CM_ODOO_DIR/docker-compose.yml
-sed -i "s/mac_address_code/$MAC_ADDRESS/" $CM_ODOO_DIR/docker-compose.yml
 
 sudo apt-get update
 sudo apt-get install -y nginx
