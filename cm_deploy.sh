@@ -85,6 +85,7 @@ EOL
 # Replace placeholders in docker-compose.yml
 sed -i "s/ed_odoo_code/$EXPIRATION_DATE/" $CM_ODOO_DIR/docker-compose.yml
 sed -i "s/uuid_code/$UUID/" $CM_ODOO_DIR/docker-compose.yml
+sed -i "s/MAC_ADDRESS_code/$MAC_ADDRESS/" $CM_ODOO_DIR/docker-compose.yml
 
 sudo apt-get update
 sudo apt-get install -y nginx
