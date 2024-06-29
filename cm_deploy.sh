@@ -19,12 +19,7 @@ sudo apt-get install -y nodejs
 node_version=$(node -v)
 npm_version=$(npm -v)
 
-if [[ "$node_version" == "v18.20.2" && "$npm_version" == "10.5.0" ]]; then
-    echo "Node.js and npm installed successfully: Node.js $node_version, npm $npm_version"
-else
-    echo "Failed to install the required Node.js or npm version."
-    exit 1
-fi
+
 
 echo "Enter your UUID:"
 read UUID
