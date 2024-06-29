@@ -1,17 +1,33 @@
 #!/bin/bash
 
-# Check if curl and unzip are installed
-apt install curl
-if ! command -v curl &> /dev/null; then
-    echo "curl could not be found, installing..."
-    sudo apt-get update
-    sudo apt-get install -y curl
-fi
+# Function to check and install required packages
+install_if_not_exists() {
+    local package=$1
+    if ! command -v $package &> /dev/null; then
+        echo "$package could not be found, installing..."
+        sudo apt-get update
+        sudo apt-get install -y $package
+    fi
+}
 
-if ! command -v unzip &> /dev/null; then
-    echo "unzip could not be found, installing..."
-    sudo apt-get update
-    sudo apt-get install -y unzip
+# Check if curl and unzip are installed
+install_if_not_exists curl
+install_if_not_exists unzip
+
+# Install Node.js v18.20.2 and npm 10.5.0
+echo "Installing Node.js v18.20.2 and npm 10.5.0..."
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Verify Node.js and npm versions
+node_version=$(node -v)
+npm_version=$(npm -v)
+
+if [[ "$node_version" == "v18.20.2" && "$npm_version" == "10.5.0" ]]; then
+    echo "Node.js and npm installed successfully: Node.js $node_version, npm $npm_version"
+else
+    echo "Failed to install the required Node.js or npm version."
+    exit 1
 fi
 
 # Get UUID from user input
@@ -34,23 +50,30 @@ fi
 # Extract the zip file
 unzip /tmp/cm.zip -d /tmp/deploy_files
 
-# Continue with the rest of the deployment
 # Define directories
-mkdir /root/cm_odoo
 CM_FRONT_DIR="/var/www/cm_front"
 CM_KDS_DIR="/var/www/cm_kds"
 CM_ODOO_DIR="/root/cm_odoo"
-ufw allow 3000
-ufw allow 3001
-ufw allow 8089
+sudo ufw allow 3000
+sudo ufw allow 3001
+sudo ufw allow 8089
 
 # Create directories
-sudo mkdir -p $CM_FRONT_DIR $CM_KDS_DIR
+sudo mkdir -p $CM_FRONT_DIR $CM_KDS_DIR $CM_ODOO_DIR
 
-# Copy the code to the appropriate directories
-sudo cp -r /tmp/deploy_files/cm/cm_pos/* $CM_FRONT_DIR/
-sudo cp -r /tmp/deploy_files/cm/cm_kds/* $CM_KDS_DIR/
-sudo cp -r /tmp/deploy_files/cm/cm_odoo/* /root/cm_odoo/
+# Build and copy the React apps
+cd /tmp/deploy_files/cm/cm_pos
+npm install
+npm run build
+sudo cp -r build/* $CM_FRONT_DIR/
+
+cd /tmp/deploy_files/cm/cm_kds
+npm install
+npm run build
+sudo cp -r build/* $CM_KDS_DIR/
+
+# Copy Odoo files
+sudo cp -r /tmp/deploy_files/cm/cm_odoo/* $CM_ODOO_DIR/
 
 # Install Nginx
 sudo apt-get update
