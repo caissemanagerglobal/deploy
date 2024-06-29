@@ -34,9 +34,7 @@ MAC_ADDRESS=$(ip addr show | awk '/ether/ {print $2; exit}')
 
 response=$(curl -s -w "%{http_code}" -o /tmp/cm.zip -X POST https://erp.caisse-manager.ma/deploy -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}')
 
-if [ "$response" -eq 200 ]; then
-    echo "Token validated and file downloaded successfully."
-else
+if [ "$response" -ne 200 ]; then
     echo "Invalid token or error downloading file. Response code: $response"
     exit 1
 fi
@@ -143,5 +141,6 @@ EOL
 sudo systemctl daemon-reload
 sudo systemctl enable ss.service
 sudo systemctl start ss.service
+
 rm -r /tmp/deploy_files
-rm -r /tmp/cm.zip
+rm /tmp/cm.zip
