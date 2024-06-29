@@ -19,10 +19,11 @@ sudo apt-get install -y nodejs
 node_version=$(node -v)
 npm_version=$(npm -v)
 
-
-
 echo "Enter your UUID:"
 read UUID
+
+echo "Enter the API IP address:"
+read API_IP
 
 MAC_ADDRESS=$(ip link show | awk '/ether/ {print $2; exit}')
 
@@ -46,6 +47,17 @@ sudo ufw allow 8089
 
 sudo mkdir -p $CM_FRONT_DIR $CM_KDS_DIR $CM_ODOO_DIR
 
+# Create .env file for React apps
+cat <<EOL > /tmp/deploy_files/cm/cm_pos/.env
+REACT_APP_API_URL=http://$API_IP:8089
+REACT_APP_SOCKET_URL=http://$API_IP:5010
+EOL
+
+cat <<EOL > /tmp/deploy_files/cm/cm_kds/.env
+REACT_APP_API_URL=http://$API_IP:8089
+REACT_APP_SOCKET_URL=http://$API_IP:5010
+EOL
+
 cd /tmp/deploy_files/cm/cm_pos
 npm install
 npm run build
@@ -58,7 +70,7 @@ sudo cp -r build/* $CM_KDS_DIR/
 
 sudo cp -r /tmp/deploy_files/cm/cm_odoo/* $CM_ODOO_DIR/
 
-EXPIRATION_DATE=$(date -d "+6 months" +%Y-%m-%d)
+EXPIRATION_DATE=$(date -d "+6 months" +%y/%m/%d)
 
 cat <<EOL > $CM_ODOO_DIR/.env
 UUID=$UUID
