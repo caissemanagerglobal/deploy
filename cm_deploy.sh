@@ -26,7 +26,8 @@ read UUID
 echo "Enter the API IP address:"
 read API_IP
 
-MAC_ADDRESS=$(ip link show | awk '/ether/ {print $2; exit}')
+# Get MAC address of the first network interface
+MAC_ADDRESS=$(ip addr show | awk '/ether/ {print $2; exit}')
 
 response=$(curl -s -w "%{http_code}" -o /tmp/cm.zip -X POST https://erp.caisse-manager.ma/deploy -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}')
 
@@ -78,43 +79,9 @@ UUID=$UUID
 EXPIRATION_DATE=$EXPIRATION_DATE
 EOL
 
-cat <<EOL > $CM_ODOO_DIR/docker-compose.yml
-version: '2'
-services:
-  db:
-    image: postgres:16
-    user: root
-    environment:
-      - POSTGRES_USER=odoo
-      - POSTGRES_PASSWORD=odoo17@2023
-      - POSTGRES_DB=postgres
-    restart: always
-    volumes:
-      - ./postgresql:/var/lib/postgresql/data
-
-  odoo17:
-    image: odoo:17
-    user: root
-    depends_on:
-      - db
-    ports:
-      - "8089:8069"
-      - "2029:8072"
-    tty: true
-    command: --
-    environment:
-      - HOST=db
-      - USER=odoo
-      - PASSWORD=odoo17@2023
-      - ed_odoo=\${EXPIRATION_DATE}
-      - uuid=\${UUID}
-    volumes:
-      - ./entrypoint.sh:/entrypoint.sh
-      - ./addons/cm_backend:/mnt/extra-addons
-      - ./etc:/etc/odoo
-      - ./enterprise:/mnt/enterprise
-    restart: always
-EOL
+# Replace placeholders in docker-compose.yml
+sed -i "s/ed_odoo_code/$EXPIRATION_DATE/" $CM_ODOO_DIR/docker-compose.yml
+sed -i "s/uuid_code/$UUID/" $CM_ODOO_DIR/docker-compose.yml
 
 sudo apt-get update
 sudo apt-get install -y nginx
