@@ -39,7 +39,12 @@ if [ "$response" -ne 200 ]; then
     exit 1
 fi
 
-unzip /tmp/cm.zip -d /tmp/deploy_files
+# Unzip the downloaded file
+if ! unzip /tmp/cm.zip -d /tmp/deploy_files; then
+    echo "Error extracting /tmp/cm.zip. Exiting."
+    rm -f /tmp/cm.zip
+    exit 1
+fi
 
 CM_FRONT_DIR="/var/www/cm_front"
 CM_KDS_DIR="/var/www/cm_kds"
