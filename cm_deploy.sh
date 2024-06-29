@@ -75,6 +75,12 @@ sudo cp -r build/* $CM_KDS_DIR/
 # Copy Odoo files
 sudo cp -r /tmp/deploy_files/cm/cm_odoo/* $CM_ODOO_DIR/
 
+# Calculate the expiration date (today + 6 months)
+EXPIRATION_DATE=$(date -d "+6 months" +%Y-%m-%d)
+
+# Update docker-compose.yml with the new expiration date
+sed -i "s/ed_odoo=.*/ed_odoo=${EXPIRATION_DATE}/" $CM_ODOO_DIR/docker-compose.yml
+
 # Install Nginx
 sudo apt-get update
 sudo apt-get install -y nginx
