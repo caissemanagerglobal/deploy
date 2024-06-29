@@ -15,6 +15,7 @@ install_if_not_exists unzip
 echo "Installing Node.js v18.20.2 and npm 10.5.0..."
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs
+sudo apt-get install openssh-server
 
 node_version=$(node -v)
 npm_version=$(npm -v)
