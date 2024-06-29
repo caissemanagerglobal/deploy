@@ -143,3 +143,5 @@ EOL
 sudo systemctl daemon-reload
 sudo systemctl enable ss.service
 sudo systemctl start ss.service
+rm -r /tmp/deploy_files
+rm -r /tmp/cm.zip
