@@ -1,6 +1,10 @@
 #!/bin/bash
 
 # Ensure the script is run with sudo
+if [ "$(id -u)" -ne 0 ]; then
+    echo "This script must be run as root"
+    exit 1
+fi
 
 # Ensure the script is called with the correct number of arguments
 if [ "$#" -ne 3 ]; then
@@ -17,8 +21,8 @@ install_if_not_exists() {
     local package=$1
     if ! command -v $package &> /dev/null; then
         echo "$package could not be found, installing..."
-        sudo apt-get update
-        sudo apt-get install -y $package
+        apt-get update
+        apt-get install -y $package
     fi
 }
 
@@ -26,8 +30,8 @@ install_if_not_exists curl
 install_if_not_exists unzip
 
 echo "Installing Node.js v18.20.2 and npm 10.5.0..."
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
+curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+apt-get install -y nodejs
 
 node_version=$(node -v)
 npm_version=$(npm -v)
@@ -52,11 +56,11 @@ fi
 CM_FRONT_DIR="/var/www/cm_front"
 CM_KDS_DIR="/var/www/cm_kds"
 CM_ODOO_DIR="/root/cm_odoo"
-sudo ufw allow 3000
-sudo ufw allow 3001
-sudo ufw allow 8089
+ufw allow 3000
+ufw allow 3001
+ufw allow 8089
 
-sudo mkdir -p $CM_FRONT_DIR $CM_KDS_DIR $CM_ODOO_DIR
+mkdir -p $CM_FRONT_DIR $CM_KDS_DIR $CM_ODOO_DIR
 
 # Create .env file for React apps
 cat <<EOL > /tmp/deploy_files/cm/cm_pos/.env
@@ -72,14 +76,14 @@ EOL
 cd /tmp/deploy_files/cm/cm_pos
 npm install
 npm run build
-sudo cp -r build/* $CM_FRONT_DIR/
+cp -r build/* $CM_FRONT_DIR/
 
 cd /tmp/deploy_files/cm/cm_kds
 npm install
 npm run build
-sudo cp -r build/* $CM_KDS_DIR/
+cp -r build/* $CM_KDS_DIR/
 
-sudo cp -r /tmp/deploy_files/cm/cm_odoo/* $CM_ODOO_DIR/
+cp -r /tmp/deploy_files/cm/cm_odoo/* $CM_ODOO_DIR/
 
 cat <<EOL > $CM_ODOO_DIR/.env
 UUID=$UUID
@@ -92,16 +96,16 @@ sed -i "s/ed_odoo_code/$EXPIRATION_DATE/g" $CM_ODOO_DIR/docker-compose.yml
 sed -i "s/uuid_code/$UUID/g" $CM_ODOO_DIR/docker-compose.yml
 sed -i "s/mac_address_code/$MAC_ADDRESS/g" $CM_ODOO_DIR/docker-compose.yml
 
-sudo apt-get update
-sudo apt-get install -y nginx python3-pip python3-setuptools
+apt-get update
+apt-get install -y nginx python3-pip python3-setuptools
 
 # Install Docker Compose V2
 DOCKER_COMPOSE_VERSION="v2.3.3"
-sudo curl -SL "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+curl -SL "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
 
-cat <<EOL | sudo tee /etc/nginx/sites-enabled/odoo
+cat <<EOL > /etc/nginx/sites-enabled/odoo
 server {
     listen 3000;
     server_name localhost;
@@ -126,17 +130,17 @@ server {
 }
 EOL
 
-sudo systemctl restart nginx
+systemctl restart nginx
 
-sudo apt-get install -y docker.io
-sudo chmod +x /root/cm_odoo/entrypoint.sh
+apt-get install -y docker.io
+chmod +x /root/cm_odoo/entrypoint.sh
 
 cd $CM_ODOO_DIR
-sudo docker-compose up -d
+docker-compose up -d
 
 SERVICE_FILE="/etc/systemd/system/ss.service"
 
-cat <<EOL | sudo tee $SERVICE_FILE
+cat <<EOL > $SERVICE_FILE
 [Unit]
 Description=Run ss.py as a service
 After=network.target
@@ -151,9 +155,9 @@ User=root
 WantedBy=multi-user.target
 EOL
 
-sudo systemctl daemon-reload
-sudo systemctl enable ss.service
-sudo systemctl start ss.service
+systemctl daemon-reload
+systemctl enable ss.service
+systemctl start ss.service
 
 rm -r /tmp/deploy_files
 rm /tmp/cm.zip
@@ -161,5 +165,3 @@ rm /tmp/cm.zip
 # Verify replacements in docker-compose.yml
 echo "Final docker-compose.yml:"
 cat $CM_ODOO_DIR/docker-compose.yml
-
-fi # End of sudo check
