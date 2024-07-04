@@ -42,7 +42,7 @@ npm_version=$(npm -v)
 MAC_ADDRESS=$(ip addr show | awk '/ether/ {print $2; exit}')
 
 # Fetch expiration date from the server
-response=$(curl -s -w "%{http_code}" -o /tmp/response.json -X POST https://erp.caisse-manager.ma/api/v1/post/installation -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}')
+response=$(curl -s -w "%{http_code}" -o /tmp/response.json -X POST https://erp.caisse-manager.ma/deploy -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}')
 http_code=$(tail -n1 /tmp/response.json)
 response_body=$(head -n -1 /tmp/response.json)
 
