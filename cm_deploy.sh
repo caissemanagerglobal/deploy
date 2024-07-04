@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Ensure the script is run with sudo
 if [ "$(id -u)" -ne 0 ]; then
     echo "This script must be run as root"
@@ -27,6 +29,7 @@ install_if_not_exists() {
 
 install_if_not_exists curl
 install_if_not_exists unzip
+apt-get install jq
 
 echo "Installing Node.js v18.20.2 and npm 10.5.0..."
 curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
@@ -39,9 +42,9 @@ npm_version=$(npm -v)
 MAC_ADDRESS=$(ip addr show | awk '/ether/ {print $2; exit}')
 
 # Fetch expiration date from the server
-response=$(curl -s -w "%{http_code}" -o /tmp/cm.zip -X POST https://erp.caisse-manager.ma/deploy -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}')
-http_code=$(tail -n1 <<< "$response")
-response_body=$(head -n -1 <<< "$response")
+response=$(curl -s -w "%{http_code}" -o /tmp/response.json -X POST https://erp.caisse-manager.ma/api/v1/post/installation -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}')
+http_code=$(tail -n1 /tmp/response.json)
+response_body=$(head -n -1 /tmp/response.json)
 
 if [ "$http_code" -ne 200 ]; then
     echo "Invalid token or error downloading file. Response code: $http_code"
@@ -99,7 +102,7 @@ UUID=$UUID
 EXPIRATION_DATE=$EXPIRATION_DATE
 EOL
 
-cd 
+cd
 # Replace placeholders in docker-compose.yml
 sed -i "s/ed_odoo_code/$EXPIRATION_DATE/g" $CM_ODOO_DIR/docker-compose.yml
 sed -i "s/uuid_code/$UUID/g" $CM_ODOO_DIR/docker-compose.yml
