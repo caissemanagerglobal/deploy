@@ -1,14 +1,17 @@
 #!/bin/bash
 
+# Ensure the script is run with sudo
+
 # Ensure the script is called with the correct number of arguments
-if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <UUID> <API_IP>"
+if [ "$#" -ne 3 ]; then
+    echo "Usage: $0 <UUID> <API_IP> <EXPIRATION_DATE>"
     exit 1
 fi
 
 # Assign arguments to variables
 UUID=$1
 API_IP=$2
+EXPIRATION_DATE=$3
 
 install_if_not_exists() {
     local package=$1
@@ -78,8 +81,6 @@ sudo cp -r build/* $CM_KDS_DIR/
 
 sudo cp -r /tmp/deploy_files/cm/cm_odoo/* $CM_ODOO_DIR/
 
-EXPIRATION_DATE=$(date -d "+6 months" +%y/%m/%d)
-
 cat <<EOL > $CM_ODOO_DIR/.env
 UUID=$UUID
 EXPIRATION_DATE=$EXPIRATION_DATE
@@ -87,12 +88,18 @@ EOL
 
 cd 
 # Replace placeholders in docker-compose.yml
-sed -i 's/ed_odoo_code/'$EXPIRATION_DATE'/g' $CM_ODOO_DIR/docker-compose.yml
-sed -i 's/uuid_code/'$UUID'/g' $CM_ODOO_DIR/docker-compose.yml
-sed -i 's/mac_address_code/'$MAC_ADDRESS'/g' $CM_ODOO_DIR/docker-compose.yml
+sed -i "s/ed_odoo_code/$EXPIRATION_DATE/g" $CM_ODOO_DIR/docker-compose.yml
+sed -i "s/uuid_code/$UUID/g" $CM_ODOO_DIR/docker-compose.yml
+sed -i "s/mac_address_code/$MAC_ADDRESS/g" $CM_ODOO_DIR/docker-compose.yml
 
 sudo apt-get update
-sudo apt-get install -y nginx
+sudo apt-get install -y nginx python3-pip python3-setuptools
+
+# Install Docker Compose V2
+DOCKER_COMPOSE_VERSION="v2.3.3"
+sudo curl -SL "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
 
 cat <<EOL | sudo tee /etc/nginx/sites-enabled/odoo
 server {
@@ -121,7 +128,7 @@ EOL
 
 sudo systemctl restart nginx
 
-sudo apt-get install -y docker.io docker-compose
+sudo apt-get install -y docker.io
 sudo chmod +x /root/cm_odoo/entrypoint.sh
 
 cd $CM_ODOO_DIR
@@ -150,3 +157,9 @@ sudo systemctl start ss.service
 
 rm -r /tmp/deploy_files
 rm /tmp/cm.zip
+
+# Verify replacements in docker-compose.yml
+echo "Final docker-compose.yml:"
+cat $CM_ODOO_DIR/docker-compose.yml
+
+fi # End of sudo check
