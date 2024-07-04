@@ -29,7 +29,7 @@ install_if_not_exists() {
 
 install_if_not_exists curl
 install_if_not_exists unzip
-apt-get install jq
+install_if_not_exists jq
 
 echo "Installing Node.js v18.20.2 and npm 10.5.0..."
 curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
@@ -42,9 +42,9 @@ npm_version=$(npm -v)
 MAC_ADDRESS=$(ip addr show | awk '/ether/ {print $2; exit}')
 
 # Fetch expiration date from the server
-response=$(curl -s -w "%{http_code}" -o /tmp/response.json -X POST https://erp.caisse-manager.ma/deploy -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}')
-http_code=$(tail -n1 /tmp/response.json)
-response_body=$(head -n -1 /tmp/response.json)
+response=$(curl -s -i -X POST https://erp.caisse-manager.ma/deploy -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}')
+http_code=$(echo "$response" | grep HTTP/ | awk '{print $2}')
+response_body=$(echo "$response" | sed -n '/^\r$/,$p' | sed '1d')
 
 if [ "$http_code" -ne 200 ]; then
     echo "Invalid token or error downloading file. Response code: $http_code"
