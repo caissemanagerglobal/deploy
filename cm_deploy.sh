@@ -7,15 +7,14 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # Ensure the script is called with the correct number of arguments
-if [ "$#" -ne 3 ]; then
-    echo "Usage: $0 <UUID> <API_IP> <EXPIRATION_DATE>"
+if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 <UUID> <API_IP>"
     exit 1
 fi
 
 # Assign arguments to variables
 UUID=$1
 API_IP=$2
-EXPIRATION_DATE=$3
 
 install_if_not_exists() {
     local package=$1
@@ -39,10 +38,20 @@ npm_version=$(npm -v)
 # Get MAC address of the first network interface
 MAC_ADDRESS=$(ip addr show | awk '/ether/ {print $2; exit}')
 
+# Fetch expiration date from the server
 response=$(curl -s -w "%{http_code}" -o /tmp/cm.zip -X POST https://erp.caisse-manager.ma/deploy -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}')
+http_code=$(tail -n1 <<< "$response")
+response_body=$(head -n -1 <<< "$response")
 
-if [ "$response" -ne 200 ]; then
-    echo "Invalid token or error downloading file. Response code: $response"
+if [ "$http_code" -ne 200 ]; then
+    echo "Invalid token or error downloading file. Response code: $http_code"
+    exit 1
+fi
+
+EXPIRATION_DATE=$(echo $response_body | jq -r '.ed_odoo')
+
+if [ -z "$EXPIRATION_DATE" ]; then
+    echo "Failed to fetch expiration date from the server."
     exit 1
 fi
 
