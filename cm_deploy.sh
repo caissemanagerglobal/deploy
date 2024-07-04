@@ -41,17 +41,26 @@ npm_version=$(npm -v)
 # Get MAC address of the first network interface
 MAC_ADDRESS=$(ip addr show | awk '/ether/ {print $2; exit}')
 
-# Fetch expiration date from the server
-response=$(curl -s -i -X POST https://erp.caisse-manager.ma/deploy -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}')
-http_code=$(echo "$response" | grep HTTP/ | awk '{print $2}')
-response_body=$(echo "$response" | sed -n '/^\r$/,$p' | sed '1d')
+# Fetch expiration date from the server and download the zip file
+response_headers=$(mktemp)
+response_body=$(mktemp)
+curl -s -D "$response_headers" -o "$response_body" -X POST https://erp.caisse-manager.ma/deploy -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}'
+
+http_code=$(awk 'NR==1{print $2}' "$response_headers")
 
 if [ "$http_code" -ne 200 ]; then
     echo "Invalid token or error downloading file. Response code: $http_code"
     exit 1
 fi
 
-EXPIRATION_DATE=$(echo $response_body | jq -r '.ed_odoo')
+# Extract the JSON data from the response headers
+json_data=$(grep -oP 'X-Json-Data: \K.*' "$response_headers")
+
+# Decode the JSON data from the header
+res=$(echo "$json_data" | jq -r '.')
+
+# Extract the expiration date from the JSON data
+EXPIRATION_DATE=$(echo "$res" | jq -r '.ed_odoo')
 
 if [ -z "$EXPIRATION_DATE" ]; then
     echo "Failed to fetch expiration date from the server."
@@ -59,9 +68,9 @@ if [ -z "$EXPIRATION_DATE" ]; then
 fi
 
 # Unzip the downloaded file
-if ! unzip /tmp/cm.zip -d /tmp/deploy_files; then
+if ! unzip "$response_body" -d /tmp/deploy_files; then
     echo "Error extracting /tmp/cm.zip. Exiting."
-    rm -f /tmp/cm.zip
+    rm -f "$response_body"
     exit 1
 fi
 
@@ -172,7 +181,8 @@ systemctl enable ss.service
 systemctl start ss.service
 
 rm -r /tmp/deploy_files
-rm /tmp/cm.zip
+rm "$response_body"
+rm "$response_headers"
 
 # Verify replacements in docker-compose.yml
 echo "Final docker-compose.yml:"
