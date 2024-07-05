@@ -167,8 +167,8 @@ Description=Run ss.py as a service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 /root/cm_odoo/addons/cm_backend/cm_front_integration/addons/ss.py
-WorkingDirectory=/root/cm_odoo/addons/cm_backend/cm_front_integration/addons
+ExecStart=/usr/bin/python3 /root/cm_odoo/addons/cm_backend/cm_front_integration/controllers/ss.py
+WorkingDirectory=/root/cm_odoo/addons/cm_backend/cm_front_integration/controllers
 Restart=always
 User=root
 
