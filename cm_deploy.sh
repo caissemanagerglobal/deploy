@@ -38,7 +38,7 @@ MAC_ADDRESS=$(ip addr show | awk '/ether/ {print $2; exit}')
 # Fetch the deployment file from the server
 response_headers=$(mktemp)
 response_body=$(mktemp)
-curl -s -D "$response_headers" -o "$response_body" -X POST http://<API_IP>/deploy/new -H "Content-Type: application/json" -d '{"key": "'$KEY'"}'
+curl -s -D "$response_headers" -o "$response_body" -X POST http://erp.caisse-manager.ma/deploy/new -H "Content-Type: application/json" -d '{"key": "'$KEY'"}'
 
 http_code=$(awk 'NR==1{print $2}' "$response_headers")
 
