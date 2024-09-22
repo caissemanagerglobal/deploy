@@ -16,6 +16,7 @@ fi
 
 # Assign arguments to variables
 HOST_IP_ADDRESS=$1
+KEY=$2
 
 install_if_not_exists() {
     local package=$1
