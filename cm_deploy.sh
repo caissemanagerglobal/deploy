@@ -54,10 +54,10 @@ if ! unzip "$response_body" -d /tmp/deploy_files; then
     exit 1
 fi
 
-CM_DJANGO_DIR="/tmp/deploy_files/cm_django_backend"
-CM_FRONT_DIR="/tmp/deploy_files/cm_front"
-CM_PREP_DIR="/tmp/deploy_files/cm_preparation_display"
-CM_BACKOFFICE_DIR="/tmp/deploy_files/cm_backoffice"
+CM_DJANGO_DIR="/tmp/deploy_files/cm/cm_django_backend"
+CM_FRONT_DIR="/tmp/deploy_files/cm/cm_front"
+CM_PREP_DIR="/tmp/deploy_files/cm/cm_preparation_display"
+CM_BACKOFFICE_DIR="/tmp/deploy_files/cm/cm_backoffice"
 
 # Replace HOST_IP_ADDRESS_var in cm_django_backend/docker-compose.yml with the provided IP
 sed -i "s/HOST_IP_ADDRESS_var/$HOST_IP_ADDRESS/g" "$CM_DJANGO_DIR/docker-compose.yml"
@@ -73,7 +73,7 @@ docker_compose_up() {
         echo "docker-compose.yml not found in $dir"
     fi
 }
-
+docker network create my_new_bridge_network
 # Run docker-compose for each component
 docker_compose_up $CM_DJANGO_DIR
 docker_compose_up $CM_FRONT_DIR
