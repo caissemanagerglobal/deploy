@@ -9,8 +9,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # Ensure the script is called with the correct number of arguments
-if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <HOST_IP_ADDRESS>"
+if [ "$#" -ne 2 ]; then
     exit 1
 fi
 
