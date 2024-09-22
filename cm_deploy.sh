@@ -9,14 +9,13 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # Ensure the script is called with the correct number of arguments
-if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <UUID> <API_IP>"
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <HOST_IP_ADDRESS>"
     exit 1
 fi
 
 # Assign arguments to variables
-UUID=$1
-API_IP=$2
+HOST_IP_ADDRESS=$1
 
 install_if_not_exists() {
     local package=$1
@@ -27,163 +26,63 @@ install_if_not_exists() {
     fi
 }
 
+# Install necessary packages
 install_if_not_exists curl
 install_if_not_exists unzip
-install_if_not_exists jq
+install_if_not_exists docker
+install_if_not_exists docker-compose
 
-echo "Installing Node.js v18.20.2 and npm 10.5.0..."
-curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-apt-get install -y nodejs
-
-node_version=$(node -v)
-npm_version=$(npm -v)
-
-# Get MAC address of the first network interface
+# Get the MAC address of the first network interface
 MAC_ADDRESS=$(ip addr show | awk '/ether/ {print $2; exit}')
 
-# Fetch expiration date from the server and download the zip file
+# Fetch the deployment file from the server
 response_headers=$(mktemp)
 response_body=$(mktemp)
-curl -s -D "$response_headers" -o "$response_body" -X POST https://erp.caisse-manager.ma/deploy -H "Content-Type: application/json" -d '{"uuid": "'$UUID'", "mac_address": "'$MAC_ADDRESS'"}'
+curl -s -D "$response_headers" -o "$response_body" -X POST http://<API_IP>/deploy/new -H "Content-Type: application/json" -d '{"key": "'$KEY'"}'
 
 http_code=$(awk 'NR==1{print $2}' "$response_headers")
 
 if [ "$http_code" -ne 200 ]; then
-    echo "Invalid token or error downloading file. Response code: $http_code"
+    echo "Invalid key or error downloading file. Response code: $http_code"
     exit 1
 fi
 
-# Extract the JSON data from the response headers
-json_data=$(grep -oP 'X-Json-Data: \K.*' "$response_headers")
-
-# Decode the JSON data from the header
-res=$(echo "$json_data" | jq -r '.')
-
-# Extract the expiration date from the JSON data
-EXPIRATION_DATE=$(echo "$res" | jq -r '.ed_odoo')
-
-if [ -z "$EXPIRATION_DATE" ]; then
-    echo "Failed to fetch expiration date from the server."
-    exit 1
-fi
-
-# Unzip the downloaded file
+# Unzip the deployment file
 if ! unzip "$response_body" -d /tmp/deploy_files; then
     echo "Error extracting /tmp/cm.zip. Exiting."
     rm -f "$response_body"
     exit 1
 fi
 
-CM_FRONT_DIR="/var/www/cm_front"
-CM_KDS_DIR="/var/www/cm_kds"
-CM_ODOO_DIR="/root/cm_odoo"
-ufw allow 3000
-ufw allow 3001
-ufw allow 8089
+CM_DJANGO_DIR="/tmp/deploy_files/cm_django_backend"
+CM_FRONT_DIR="/tmp/deploy_files/cm_front"
+CM_PREP_DIR="/tmp/deploy_files/cm_preparation_display"
+CM_BACKOFFICE_DIR="/tmp/deploy_files/cm_backoffice"
 
-mkdir -p $CM_FRONT_DIR $CM_KDS_DIR $CM_ODOO_DIR
+# Replace HOST_IP_ADDRESS_var in cm_django_backend/docker-compose.yml with the provided IP
+sed -i "s/HOST_IP_ADDRESS_var/$HOST_IP_ADDRESS/g" "$CM_DJANGO_DIR/docker-compose.yml"
 
-# Create .env file for React apps
-cat <<EOL > /tmp/deploy_files/cm/cm_pos/.env
-REACT_APP_API_URL=http://$API_IP:8089
-REACT_APP_SOCKET_URL=http://$API_IP:5010
-EOL
-
-cat <<EOL > /tmp/deploy_files/cm/cm_kds/.env
-REACT_APP_API_URL=http://$API_IP:8089
-REACT_APP_SOCKET_URL=http://$API_IP:5010
-EOL
-
-cd /tmp/deploy_files/cm/cm_pos
-npm install
-npm run build
-cp -r build/* $CM_FRONT_DIR/
-
-cd /tmp/deploy_files/cm/cm_kds
-npm install
-npm run build
-cp -r build/* $CM_KDS_DIR/
-
-cp -r /tmp/deploy_files/cm/cm_odoo/* $CM_ODOO_DIR/
-
-cat <<EOL > $CM_ODOO_DIR/.env
-UUID=$UUID
-EXPIRATION_DATE=$EXPIRATION_DATE
-EOL
-
-cd
-# Replace placeholders in docker-compose.yml
-sed -i "s/ed_odoo_code/$EXPIRATION_DATE/g" $CM_ODOO_DIR/docker-compose.yml
-sed -i "s/uuid_code/$UUID/g" $CM_ODOO_DIR/docker-compose.yml
-sed -i "s/mac_address_code/$MAC_ADDRESS/g" $CM_ODOO_DIR/docker-compose.yml
-
-apt-get update
-apt-get install -y nginx python3-pip python3-setuptools
-
-# Install Docker Compose V2
-DOCKER_COMPOSE_VERSION="v2.3.3"
-curl -SL "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
-chmod +x /usr/local/bin/docker-compose
-ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
-
-cat <<EOL > /etc/nginx/sites-enabled/odoo
-server {
-    listen 3000;
-    server_name localhost;
-
-    root /var/www/cm_front;
-    index index.html index.htm;
-
-    location / {
-        try_files \$uri \$uri/ =404;
-    }
+# Start Docker services for each directory
+docker_compose_up() {
+    local dir=$1
+    if [ -f "$dir/docker-compose.yml" ]; then
+        echo "Running docker-compose in $dir..."
+        cd "$dir"
+        docker-compose up -d
+    else
+        echo "docker-compose.yml not found in $dir"
+    fi
 }
-server {
-    listen 3001;
-    server_name localhost;
 
-    root /var/www/cm_kds;
-    index index.html index.htm;
+# Run docker-compose for each component
+docker_compose_up $CM_DJANGO_DIR
+docker_compose_up $CM_FRONT_DIR
+docker_compose_up $CM_PREP_DIR
+docker_compose_up $CM_BACKOFFICE_DIR
 
-    location / {
-        try_files \$uri \$uri/ =404;
-    }
-}
-EOL
-
-systemctl restart nginx
-
-apt-get install -y docker.io
-chmod +x /root/cm_odoo/entrypoint.sh
-
-cd $CM_ODOO_DIR
-docker-compose up -d
-
-SERVICE_FILE="/etc/systemd/system/ss.service"
-
-cat <<EOL > $SERVICE_FILE
-[Unit]
-Description=Run ss.py as a service
-After=network.target
-
-[Service]
-ExecStart=/usr/bin/python3 /root/cm_odoo/addons/cm_backend/cm_front_integration/controllers/ss.py
-WorkingDirectory=/root/cm_odoo/addons/cm_backend/cm_front_integration/controllers
-Restart=always
-User=root
-
-[Install]
-WantedBy=multi-user.target
-EOL
-
-systemctl daemon-reload
-systemctl enable ss.service
-systemctl start ss.service
-
+# Clean up temporary files
 rm -r /tmp/deploy_files
 rm "$response_body"
 rm "$response_headers"
 
-# Verify replacements in docker-compose.yml
-echo "Final docker-compose.yml:"
-cat $CM_ODOO_DIR/docker-compose.yml
+echo "Deployment completed successfully."
