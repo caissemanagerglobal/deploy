@@ -10,6 +10,7 @@ fi
 
 # Ensure the script is called with the correct number of arguments
 if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 <HOST_IP_ADDRESS> <KEY>"
     exit 1
 fi
 
@@ -29,8 +30,31 @@ install_if_not_exists() {
 # Install necessary packages
 install_if_not_exists curl
 install_if_not_exists unzip
-install_if_not_exists docker
-install_if_not_exists docker-compose
+
+# Set up Docker repository and install docker-ce if not already installed
+if ! command -v docker &> /dev/null; then
+    echo "Docker could not be found, setting up Docker repository..."
+    apt-get update
+    apt-get install -y \
+        ca-certificates \
+        curl \
+        gnupg
+
+    # Add Docker’s official GPG key
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+    # Set up the Docker stable repository
+    echo \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+        $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    apt-get update
+    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+fi
+
+# Install docker-compose plugin if not already installed
+install_if_not_exists docker-compose-plugin
 
 # Get the MAC address of the first network interface
 MAC_ADDRESS=$(ip addr show | awk '/ether/ {print $2; exit}')
@@ -67,13 +91,15 @@ docker_compose_up() {
     local dir=$1
     if [ -f "$dir/docker-compose.yml" ]; then
         echo "Running docker-compose in $dir..."
-        cd "$dir"
-        docker-compose up -d
+        docker compose -f "$dir/docker-compose.yml" up -d  # Explicitly specify the path to the docker-compose.yml
     else
         echo "docker-compose.yml not found in $dir"
     fi
 }
+
+# Create a new Docker bridge network
 docker network create my_new_bridge_network
+
 # Run docker-compose for each component
 docker_compose_up $CM_DJANGO_DIR
 docker_compose_up $CM_FRONT_DIR
