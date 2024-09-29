@@ -72,16 +72,16 @@ if [ "$http_code" -ne 200 ]; then
 fi
 
 # Unzip the deployment file
-if ! unzip "$response_body" -d /tmp/deploy_files; then
-    echo "Error extracting /tmp/cm.zip. Exiting."
+if ! unzip "$response_body" -d /home/cm/deploy_files; then
+    echo "Error extracting /home/cm/cm.zip. Exiting."
     rm -f "$response_body"
     exit 1
 fi
 
-CM_DJANGO_DIR="/tmp/deploy_files/cm/cm_django_backend"
-CM_FRONT_DIR="/tmp/deploy_files/cm/cm_front"
-CM_PREP_DIR="/tmp/deploy_files/cm/cm_preparation_display"
-CM_BACKOFFICE_DIR="/tmp/deploy_files/cm/cm_backoffice"
+CM_DJANGO_DIR="/home/cm/deploy_files/cm/cm_django_backend"
+CM_FRONT_DIR="/home/cm/deploy_files/cm/cm_front"
+CM_PREP_DIR="/home/cm/deploy_files/cm/cm_preparation_display"
+CM_BACKOFFICE_DIR="/home/cm/deploy_files/cm/cm_backoffice"
 
 # Replace HOST_IP_ADDRESS_var in cm_django_backend/docker-compose.yml with the provided IP
 sed -i "s/HOST_IP_ADDRESS_var/$HOST_IP_ADDRESS/g" "$CM_DJANGO_DIR/docker-compose.yml"
@@ -107,8 +107,16 @@ docker_compose_up $CM_PREP_DIR
 docker_compose_up $CM_BACKOFFICE_DIR
 
 # Clean up temporary files
-rm -r /tmp/deploy_files
+rm -r /home/cm/deploy_files
 rm "$response_body"
 rm "$response_headers"
+
+
+#allow firewall
+ufw allow 4000
+ufw allow 5050
+ufw allow 3000
+ufw allow 8000
+
 
 echo "Deployment completed successfully."
